@@ -228,15 +228,18 @@ class Formulary
     available_formulas = Hash.new
     linked_taps_path.each_child(true) do |child|
       this_priority = child.basename.to_s.split('.')[0].to_i
-      if Pathname.new(child/"#{ref.downcase}.rb").file?
-        available_formulas[this_priority] = [] if available_formulas[this_priority].nil?
-        available_formulas[this_priority] << child
+      child.find_formula do |file|
+        if file.basename(".rb").to_s == ref.downcase
+          available_formulas[this_priority] = [] if available_formulas[this_priority].nil?
+          available_formulas[this_priority] << file
+        end
       end
     end
+    
     core_path = Pathname.new("#{HOMEBREW_LIBRARY}/Formula/")
     if Pathname.new(core_path/"#{ref.downcase}.rb").file?
       available_formulas[50] = [] if available_formulas[50].nil?
-      available_formulas[50] << core_path
+      available_formulas[50] << core_path/"#{ref.downcase}.rb"
     end
     unless available_formulas.empty?
       puts available_formulas
@@ -248,7 +251,7 @@ class Formulary
         else
           selected_index = 0
         end
-        return FromPathLoader.new(available_formulas[this_priority][selected_index]/"#{ref.downcase}.rb".to_s)
+        return FromPathLoader.new(available_formulas[this_priority][selected_index].to_s)
       end
     end
 
