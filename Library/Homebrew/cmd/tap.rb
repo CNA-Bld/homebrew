@@ -74,6 +74,10 @@ module Homebrew
   end
 
   def unlink_tapped_tap(user, repo)
+    # Temporary dirty hack to downcase the folder name so we are not bitten
+    user.downcase!
+    repo.downcase!
+
     t = HOMEBREW_LIBRARY.to_s + "/LinkedTaps/??.#{user}.#{repo}"
     linked_tapd = Pathname.glob(t)[0]
     if !linked_tapd.nil?
