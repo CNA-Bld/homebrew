@@ -82,6 +82,10 @@ module Homebrew
   end
 
   def link_tapped_tap(user, repo, tapd, priority)
+    # Temporary dirty hack to downcase the folder name so we are not bitten
+    user.downcase!
+    repo.downcase!
+
     # We use period as splitter as user / repo name may contatin both _ and -
     to = HOMEBREW_LIBRARY.join("LinkedTaps/%2d.%s.%s" % [priority, user, repo])
     to.delete if to.symlink? && to.resolved_path == tapd
