@@ -23,16 +23,17 @@ module Homebrew
       linked_tapd = Pathname.glob(t)[0]  # What!?
       if !linked_tapd.nil?
         linked_tapd.delete
+        puts "Unlinked #{tapname}"
       else
         # Old style taps
         files = []
         tapd.find_formula { |file| files << file }
         unlink_tap_formula(files)
+        puts "Untapped #{files.length} formula#{plural(files.length, 'e')}"
       end
 
       tapd.rmtree
       tapd.dirname.rmdir_if_possible
-      puts "Untapped #{files.length} formula#{plural(files.length, 'e')}"
     end
   end
 
