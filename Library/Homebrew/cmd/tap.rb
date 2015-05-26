@@ -33,6 +33,7 @@ module Homebrew
           link_tapped_tap user, repo, tapd, priority
         end
       end
+      true
     else
       ohai "Tapping #{repouser}/#{repo}"
       args = %W[clone https://github.com/#{repouser}/homebrew-#{repo} #{tapd}]
