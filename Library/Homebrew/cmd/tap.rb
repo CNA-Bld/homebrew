@@ -91,7 +91,7 @@ module Homebrew
     repo.downcase!
 
     # We use period as splitter as user / repo name may contatin both _ and -
-    to = HOMEBREW_LIBRARY.join("LinkedTaps/%2d.%s.%s" % [priority, user, repo])
+    to = HOMEBREW_LIBRARY.join("LinkedTaps/%02d.%s.%s" % [priority, user, repo])
     to.delete if to.symlink? && to.resolved_path == tapd
 
     begin
