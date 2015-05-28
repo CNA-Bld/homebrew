@@ -97,10 +97,17 @@ module Homebrew
 
     begin
       to.make_relative_symlink(tapd)
+      check_same_priority(user, repo, priority)
     rescue SystemCallError
       to = to.resolved_path if to.symlink?
       oppo "Something went wrong." # TODO
     end
+  end
+
+  def check_same_priority(user, repo, priority)
+    other_sources = []
+    other_sources << HOMEBREW_LIBRARY.join("Formula/") if priority == 50
+    other_sources << Pathname.glob(HOMEBREW_LIBRARY.to_s + "/LinkedTaps/#{priority}.*")
   end
 
   def link_tap_formula(paths, warn_about_conflicts=true)
