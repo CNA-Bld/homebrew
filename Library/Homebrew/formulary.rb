@@ -212,7 +212,12 @@ class Formulary
       return FromPathLoader.new(ref)
     end
 
-    formula_with_that_name = core_path(ref)
+    # formula_with_that_name = core_path(ref)
+    # if formula_with_that_name.file?
+    #   return FormulaLoader.new(ref, formula_with_that_name)
+    # end
+
+    formula_with_that_name = find_with_priority(ref)
     if formula_with_that_name.file?
       return FormulaLoader.new(ref, formula_with_that_name)
     end
@@ -222,12 +227,12 @@ class Formulary
       return AliasLoader.new(possible_alias)
     end
 
-    possible_tap_formulae = tap_paths(ref)
-    if possible_tap_formulae.size > 1
-      raise TapFormulaAmbiguityError.new(ref, possible_tap_formulae)
-    elsif possible_tap_formulae.size == 1
-      return FormulaLoader.new(ref, possible_tap_formulae.first)
-    end
+    # possible_tap_formulae = tap_paths(ref)
+    # if possible_tap_formulae.size > 1
+    #   raise TapFormulaAmbiguityError.new(ref, possible_tap_formulae)
+    # elsif possible_tap_formulae.size == 1
+    #   return FormulaLoader.new(ref, possible_tap_formulae.first)
+    # end
 
     possible_cached_formula = Pathname.new("#{HOMEBREW_CACHE_FORMULA}/#{ref}.rb")
     if possible_cached_formula.file?
@@ -235,6 +240,35 @@ class Formulary
     end
 
     return NullLoader.new(ref)
+  end
+
+  def self.find_with_priority(ref)
+    linked_taps_path = Pathname.new("#{HOMEBREW_LIBRARY}/LinkedTaps")
+    available_formulas = Hash.new
+    linked_taps_path.each_child(true) do |child|
+      this_priority = child.basename.to_s.split('.')[0].to_i
+      if Pathname.new(child/"#{ref.downcase}.rb").file?
+        available_formulas[this_priority] = [] if available_formulas[this_priority].nil?
+        available_formulas[this_priority] << child
+      end
+    end
+    core_path = Pathname.new("#{HOMEBREW_LIBRARY}/Formula/")
+    if Pathname.new(core_path/"#{ref.downcase}.rb").file?
+      available_formulas[50] = [] if available_formulas[50].nil?
+      available_formulas[50] << core_path
+    end
+    unless available_formulas.empty?
+      available_formulas.keys.sort.each do |this_priority|
+        if available_formulas[this_priority].length > 1
+          ohai "Multiple available. Please choose one: Sorry not supported yet, we temporarily choose first one for you lah."
+          puts available_formulas[this_priority].to_s
+          selected_index = 0
+        else
+          selected_index = 0
+        end
+        return available_formulas[this_priority][selected_index]/"#{ref.downcase}.rb"
+      end
+    end
   end
 
   def self.core_path(name)
