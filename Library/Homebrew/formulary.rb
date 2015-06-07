@@ -221,7 +221,7 @@ class Formulary
     # end
 
     formula_with_that_name = find_with_priority(ref, is_installing, warn_all_ambiguity)
-    if formula_with_that_name.file?
+    if formula_with_that_name
       return FormulaLoader.new(ref, formula_with_that_name)
     end
 
