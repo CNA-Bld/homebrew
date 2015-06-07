@@ -11,9 +11,9 @@ module HomebrewArgvExtension
     select { |arg| arg.start_with?("--") }
   end
 
-  def formulae(is_installing = false)
+  def formulae(is_installing = false, warn_all_ambiguity = false)
     require "formula"
-    @formulae ||= (downcased_unique_named - casks).map { |name| Formulary.factory(name, spec, is_installing) }
+    @formulae ||= (downcased_unique_named - casks).map { |name| Formulary.factory(name, spec, is_installing, warn_all_ambiguity) }
   end
 
   def resolved_formulae

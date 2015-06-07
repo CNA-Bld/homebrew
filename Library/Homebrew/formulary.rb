@@ -166,8 +166,9 @@ class Formulary
   # * a formula pathname
   # * a formula URL
   # * a local bottle reference
-  def self.factory(ref, spec=:stable, is_installing=false)
-    loader_for(ref, is_installing).get_formula(spec)
+  def self.factory(ref, spec=:stable, is_installing=false, warn_all_ambiguity=false)
+    spec = spec || :stable  # TODO: hack to have fake optional arguments
+    loader_for(ref, is_installing, warn_all_ambiguity).get_formula(spec)  # TODO: check all usages and change respective parameters
   end
 
   # Return a Formula instance for the given rack.
@@ -198,7 +199,7 @@ class Formulary
     loader_for(ref).path
   end
 
-  def self.loader_for(ref, is_installing = false)
+  def self.loader_for(ref, is_installing = false, warn_all_ambiguity = false)
     case ref
     when %r[(https?|ftp)://]
       return FromUrlLoader.new(ref)
@@ -217,7 +218,7 @@ class Formulary
     #   return FormulaLoader.new(ref, formula_with_that_name)
     # end
 
-    formula_with_that_name = find_with_priority(ref, is_installing)
+    formula_with_that_name = find_with_priority(ref, is_installing, warn_all_ambiguity)
     if formula_with_that_name.file?
       return FormulaLoader.new(ref, formula_with_that_name)
     end
@@ -242,7 +243,7 @@ class Formulary
     return NullLoader.new(ref)
   end
 
-  def self.find_with_priority(ref, is_installing=true)
+  def self.find_with_priority(ref, is_installing, warn_all_ambiguity)
     linked_taps_path = Pathname.new("#{HOMEBREW_LIBRARY}/LinkedTaps")
     available_formulas = Hash.new
     linked_taps_path.each_child(true) do |child|
@@ -257,22 +258,33 @@ class Formulary
       available_formulas[50] = [] if available_formulas[50].nil?
       available_formulas[50] << core_path
     end
+
     unless available_formulas.empty?
-      available_formulas.keys.sort.each do |this_priority|
-        if available_formulas[this_priority].length > 1
-          if is_installing
-            ohai "Multiple available. Please choose one: Sorry not supported yet, we temporarily choose first one for you lah."
-            puts available_formulas[this_priority].to_s
-            selected_index = 0
-          else
-            raise TapFormulaAmbiguityError.new(ref, available_formulas[this_priority].collect { |x| (x/"#{ref.downcase}.rb").realpath })
-          end
+      if warn_all_ambiguity
+        flat_formulas = available_formulas.values.flatten
+        if flat_formulas.length == 1
+          return flat_formulas.first
         else
-          selected_index = 0
+          raise TapFormulaAmbiguityError.new(ref, flat_formulas.collect { |x| (x/"#{ref.downcase}.rb").realpath })
         end
-        return available_formulas[this_priority][selected_index]/"#{ref.downcase}.rb"
+      else
+        available_formulas.keys.sort.each do |this_priority|
+          if available_formulas[this_priority].length > 1
+            if is_installing
+              ohai "Multiple available. Please choose one: Sorry not supported yet, we temporarily choose first one for you lah."
+              puts available_formulas[this_priority].to_s
+              selected_index = 0
+            else
+              raise TapFormulaAmbiguityError.new(ref, available_formulas[this_priority].collect { |x| (x/"#{ref.downcase}.rb").realpath })
+            end
+          else
+            selected_index = 0
+          end
+          return available_formulas[this_priority][selected_index]/"#{ref.downcase}.rb"
+        end
       end
     end
+
   end
 
   def self.core_path(name)
