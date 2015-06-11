@@ -246,19 +246,11 @@ class Formulary
   end
 
   def self.find_with_priority(ref, is_installing, warn_all_ambiguity)
-    linked_taps_path = Pathname.new("#{HOMEBREW_LIBRARY}/LinkedTaps")
-    available_formulas = Hash.new
-    linked_taps_path.each_child(true) do |child|
-      this_priority = child.basename.to_s.split('.')[0].to_i
-      if Pathname.new(child/"#{ref.downcase}.rb").file?
-        available_formulas[this_priority] = [] if available_formulas[this_priority].nil?
-        available_formulas[this_priority] << child
-      end
-    end
-    core_path = Pathname.new("#{HOMEBREW_LIBRARY}/Formula/")
-    if Pathname.new(core_path/"#{ref.downcase}.rb").file?
+    available_formulas = tap_paths(ref)
+    core_formula = core_path(ref)
+    if core_formula.file?
       available_formulas[50] = [] if available_formulas[50].nil?
-      available_formulas[50] << core_path
+      available_formulas[50] << core_formula
     end
 
     unless available_formulas.empty?
@@ -267,7 +259,7 @@ class Formulary
         if flat_formulas.length == 1
           return flat_formulas.first
         else
-          raise TapFormulaAmbiguityError.new(ref, flat_formulas.collect { |x| (x/"#{ref.downcase}.rb").realpath })
+          raise TapFormulaAmbiguityError.new(ref, flat_formulas)
         end
       else
         available_formulas.keys.sort.each do |this_priority|
@@ -277,12 +269,12 @@ class Formulary
               puts available_formulas[this_priority].to_s
               selected_index = 0
             else
-              raise TapFormulaAmbiguityError.new(ref, available_formulas[this_priority].collect { |x| (x/"#{ref.downcase}.rb").realpath })
+              raise TapFormulaAmbiguityError.new(ref, available_formulas[this_priority])
             end
           else
             selected_index = 0
           end
-          return available_formulas[this_priority][selected_index]/"#{ref.downcase}.rb"
+          return available_formulas[this_priority][selected_index]
         end
       end
     end
@@ -294,13 +286,27 @@ class Formulary
   end
 
   def self.tap_paths(name)
+    available_formulas = Hash.new
     name = name.downcase
-    Dir["#{HOMEBREW_LIBRARY}/Taps/*/*/"].map do |tap|
-      Pathname.glob([
-        "#{tap}Formula/#{name}.rb",
-        "#{tap}HomebrewFormula/#{name}.rb",
-        "#{tap}#{name}.rb",
-      ]).detect(&:file?)
-    end.compact
+    # Dir["#{HOMEBREW_LIBRARY}/Taps/*/*/"].map do |tap|
+    #   Pathname.glob([
+    #     "#{tap}Formula/#{name}.rb",
+    #     "#{tap}HomebrewFormula/#{name}.rb",
+    #     "#{tap}#{name}.rb",
+    #   ]).detect(&:file?)
+    # end.compact
+
+    Tap.each do |tap|
+      this_priority = tap.get_priority
+      tap_path = tap.path
+      Pathname.glob(["#{tap_path}/#{name}.rb", "#{tap_path}/Formula/#{name}.rb", "#{tap_path}/HomebrewFormula/#{name}.rb"]) do |formula|
+        if formula.file?
+          available_formulas[this_priority] = [] if available_formulas[this_priority].nil?
+          available_formulas[this_priority] << formula
+        end
+      end
+    end
+    available_formulas
+>>>>>>> implement formulary.find_with_priority with json structure
   end
 end
