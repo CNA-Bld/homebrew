@@ -1,3 +1,5 @@
+require 'utils/json'
+
 class Tap
   TAP_DIRECTORY = HOMEBREW_LIBRARY/"Taps"
 
@@ -15,6 +17,7 @@ class Tap
     @repo = repo
     @name = "#{@user}/#{@repo}".downcase
     @path = TAP_DIRECTORY/"#{@user}/homebrew-#{@repo}".downcase
+    @json_path = TAP_DIRECTORY/"#{@user}/#{@repo}.json".downcase
     if installed?
       @path.cd do
         @remote = Utils.popen_read("git", "config", "--get", "remote.origin.url").chomp
@@ -63,6 +66,25 @@ class Tap
     Pathname.glob("#{path}/cmd/brew-*").select(&:executable?)
   end
 
+  def get_priority
+    @json_path.exist?? Utils::JSON.load(File.read(@json_path))["priority"] : 99
+  end
+
+  def set_priority priority
+    attributes = {
+        "priority" => priority
+    }
+    @json_path.atomic_write(Utils::JSON.dump(attributes))
+    if priority == 50
+      opoo "Core formulae has a priority of 50, we don't recommand do this!"
+    end
+    Tap.each do |other_tap|
+      if !(other_tap.name.eql? self.name) && other_tap.get_priority == priority
+        opoo "Same priority: #{other_tap.name}"
+      end
+    end
+  end
+
   def to_hash
     {
       "name" => @name,
@@ -70,6 +92,7 @@ class Tap
       "repo" => @repo,
       "path" => @path.to_s,
       "remote" => @remote,
+      "priority" => get_priority,
       "installed" => installed?,
       "official" => official?,
       "custom_remote" => custom_remote?,

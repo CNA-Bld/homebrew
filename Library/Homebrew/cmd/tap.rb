@@ -17,7 +17,7 @@ module Homebrew
     tap = Tap.new user, repo, clone_target
 
     if tap.installed?
-      ohai "#{repouser}/#{repo} Already Tapped. Changing Prioirity."
+      ohai "#{user}/#{repo} Already Tapped. Changing Prioirity."
       priority = ARGV.value("priority")
       if priority.nil?
         opoo "Priority not specified, terminating."
@@ -26,8 +26,7 @@ module Homebrew
         if priority < 0 or priority > 99
           opoo "Priority not allowed, terminating."
         else
-          unlink_tapped_tap user, repo
-          link_tapped_tap user, repo, tapd, priority
+          tap.set_priority priority
         end
       end
       true
@@ -52,7 +51,7 @@ module Homebrew
         end
       end
 
-      link_tapped_tap user, repo, tapd, priority
+      tap.set_priority priority
 
       if !clone_target && tap.private?
         puts <<-EOS.undent
@@ -65,37 +64,6 @@ module Homebrew
         EOS
       end
       true
-    end
-  end
-
-  def unlink_tapped_tap(user, repo)
-    # Temporary dirty hack to downcase the folder name so we are not bitten
-    user.downcase!
-    repo.downcase!
-
-    t = HOMEBREW_LIBRARY.to_s + "/LinkedTaps/??.#{user}.#{repo}"
-    linked_tapd = Pathname.glob(t)[0]
-    unless linked_tapd.nil?
-      linked_tapd.delete
-    end
-  end
-
-  def link_tapped_tap(user, repo, tapd, priority)
-    # Temporary dirty hack to downcase the folder name so we are not bitten
-    user.downcase!
-    repo.downcase!
-
-    check_same_priority(user, repo, priority)
-
-    # We use period as splitter as user / repo name may contatin both _ and -
-    to = HOMEBREW_LIBRARY.join("LinkedTaps/%02d.%s.%s" % [priority, user, repo])
-    to.delete if to.symlink? && to.resolved_path == tapd
-
-    begin
-      to.make_relative_symlink(tapd)
-    rescue SystemCallError
-      to = to.resolved_path if to.symlink?
-      opoo "Something went wrong." # TODO
     end
   end
 
