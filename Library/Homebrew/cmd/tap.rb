@@ -67,15 +67,6 @@ module Homebrew
     end
   end
 
-  def check_same_priority(user, repo, priority)
-    other_sources = []
-    other_sources << HOMEBREW_LIBRARY.join("Formula/") if priority == 50
-    other_sources += Pathname.glob(HOMEBREW_LIBRARY.to_s + "/LinkedTaps/#{priority}.*")
-    if other_sources.length > 0
-      opoo "Taps with same priority detected: " + other_sources.to_s
-    end
-  end
-
   # Migrate tapped formulae from symlink-based to directory-based structure.
   def migrate_taps(options={})
     ignore = HOMEBREW_LIBRARY/"Formula/.gitignore"
