@@ -14,9 +14,7 @@ module Homebrew
       tap.path.rmtree
       tap.path.dirname.rmdir_if_possible
 
-      t = HOMEBREW_LIBRARY.to_s + "/LinkedTaps/??.#{user}.#{repo}"
-      linked_tapd = Pathname.glob(t)[0]
-      linked_tapd.delete unless linked_tapd.nil?
+      tap.json_path.delete
 
       puts "Untapped #{formula_count} formula#{plural(formula_count, 'e')}"
     end

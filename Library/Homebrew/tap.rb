@@ -10,6 +10,7 @@ class Tap
   attr_reader :name
   attr_reader :path
   attr_reader :remote
+  attr_reader :json_path
 
   def initialize(user, repo, remote=nil)
     # we special case homebrew so users don't have to shift in a terminal
