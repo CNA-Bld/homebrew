@@ -1,3 +1,5 @@
+require 'utils/json'
+
 # a {Tap} is used to extend the formulae provided by Homebrew core.
 # Usually, it's synced with a remote git repository. And it's likely
 # a Github repository with the name of `user/homebrew-repo`. In such
@@ -25,12 +27,17 @@ class Tap
   # e.g. `/usr/local/Library/Taps/user/homebrew-repo`
   attr_reader :path
 
+  # The path of configuration for this {Tap}
+  # e.g. 'usr/local/Library/Taps/user/repo.json'
+  attr_reader :json_path
+
   def initialize(user, repo)
     # we special case homebrew so users don't have to shift in a terminal
     @user = user == "homebrew" ? "Homebrew" : user
     @repo = repo
     @name = "#{@user}/#{@repo}".downcase
     @path = TAP_DIRECTORY/"#{@user}/homebrew-#{@repo}".downcase
+    @json_path = TAP_DIRECTORY/"#{@user}/#{@repo}.json".downcase
   end
 
   # The remote path to this {Tap}.
@@ -96,6 +103,24 @@ class Tap
     Pathname.glob("#{path}/cmd/brew-*").select(&:executable?)
   end
 
+  def pinned?
+    @json_path.exist?? Utils::JSON.load(File.read(@json_path))["pinned"] : false
+  end
+
+  def pin
+    attributes = {
+        "pinned" => true
+    }
+    @json_path.atomic_write(Utils::JSON.dump(attributes))
+  end
+
+  def unpin
+    attributes = {
+        "pinned" => false
+    }
+    @json_path.atomic_write(Utils::JSON.dump(attributes))
+  end
+
   def to_hash
     {
       "name" => @name,
@@ -109,6 +134,7 @@ class Tap
       "formula_names" => formula_names,
       "formula_files" => formula_files.map(&:to_s),
       "command_files" => command_files.map(&:to_s),
+      "pinned" => pinned?
     }
   end
 
