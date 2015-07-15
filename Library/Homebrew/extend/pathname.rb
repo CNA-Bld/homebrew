@@ -397,6 +397,16 @@ class Pathname
     out
   end
 
+  def tap_name
+    match = self.to_s =~ HOMEBREW_TAP_PATH_REGEX
+    match ? "#{$1}/#{$2.sub("homebrew-", "")}" : "homebrew/homebrew"
+  end
+
+  def tap_pinned?
+    match = self.to_s =~ HOMEBREW_TAP_PATH_REGEX
+    match ? Tap.new($1, $2.sub("homebrew-", "")).pinned? : false
+  end
+
   # We redefine these private methods in order to add the /o modifier to
   # the Regexp literals, which forces string interpolation to happen only
   # once instead of each time the method is called. This is fixed in 1.9+.

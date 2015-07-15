@@ -198,7 +198,7 @@ class Formulary
     loader_for(ref).path
   end
 
-  def self.loader_for(ref)
+  def self.loader_for(ref, respect_priority=false)
     case ref
     when %r[(https?|ftp)://]
       return FromUrlLoader.new(ref)
@@ -210,6 +210,20 @@ class Formulary
 
     if File.extname(ref) == ".rb"
       return FromPathLoader.new(ref)
+    end
+
+    if respect_priority
+      possible_pinned_tap_formulae = pinned_tap_paths(ref)
+      if possible_pinned_tap_formulae.size > 1
+        raise TapFormulaAmbiguityError.new(ref, possible_pinned_tap_formulae)
+      elsif possible_pinned_tap_formulae.size == 1
+        selected_formula = possible_pinned_tap_formulae.first
+        formula_with_that_name = core_path(ref)
+        if formula_with_that_name.file?
+          opoo "#{ref} is provided by core, but is now shadowed by #{selected_formula.tap_name}."
+        end
+        return FormulaLoader.new(ref, selected_formula)
+      end
     end
 
     formula_with_that_name = core_path(ref)
@@ -250,5 +264,15 @@ class Formulary
         "#{tap}#{name}.rb",
       ]).detect(&:file?)
     end.compact
+  end
+
+  def self.pinned_tap_paths(name)
+    tap_paths = self.tap_paths(name)
+    tap_paths.select { |x| x.tap_pinned? }
+  end
+
+  def self.factory_with_priority(ref, spec=:stable)
+    loader = loader_for(ref, true)
+    loader.get_formula(spec)
   end
 end
