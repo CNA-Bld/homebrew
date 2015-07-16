@@ -243,30 +243,30 @@ class Formulary
     Pathname.new("#{HOMEBREW_LIBRARY}/Formula/#{name.downcase}.rb")
   end
 
-  def self.tap_paths(name)
+  def self.tap_paths(name, taps=Dir["#{HOMEBREW_LIBRARY}/Taps/*/*"])
     name = name.downcase
-    Dir["#{HOMEBREW_LIBRARY}/Taps/*/*/"].map do |tap|
+    taps.map do |tap|
       Pathname.glob([
-        "#{tap}Formula/#{name}.rb",
-        "#{tap}HomebrewFormula/#{name}.rb",
-        "#{tap}#{name}.rb",
+        "#{tap}/Formula/#{name}.rb",
+        "#{tap}/HomebrewFormula/#{name}.rb",
+        "#{tap}/#{name}.rb",
       ]).detect(&:file?)
     end.compact
   end
 
-  def self.pinned_tap_paths(name)
-    tap_paths = self.tap_paths(name)
-    tap_paths.select { |x| x.tap_pinned? }
+  def self.tap_name(path)
+    match = path =~ HOMEBREW_TAP_PATH_REGEX
+    match ? "#{$1}/#{$2.sub("homebrew-", "")}" : "homebrew/homebrew"
   end
 
   def self.find_with_priority(ref, spec=:stable)
-    possible_pinned_tap_formulae = pinned_tap_paths(ref)
+    possible_pinned_tap_formulae = tap_paths(ref, Tap.select(&:pinned?).map(&:path))
     if possible_pinned_tap_formulae.size > 1
       raise TapFormulaAmbiguityError.new(ref, possible_pinned_tap_formulae)
     elsif possible_pinned_tap_formulae.size == 1
       selected_formula = possible_pinned_tap_formulae.first
       if core_path(ref).file?
-        opoo "#{ref} is provided by core, but is now shadowed by #{selected_formula.tap_name}."
+        opoo "#{ref} is provided by core, but is now shadowed by #{self.tap_name(selected_formula.to_s)}."
       end
       factory(selected_formula, spec)
     else
