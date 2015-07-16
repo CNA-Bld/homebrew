@@ -14,7 +14,7 @@ module Homebrew
     end
 
     ARGV.named.each do |name|
-      if !File.exist?(name) && (!name =~ HOMEBREW_CORE_FORMULA_REGEX) \
+      if !File.exist?(name) && (name !~ HOMEBREW_CORE_FORMULA_REGEX) \
               && (name =~ HOMEBREW_TAP_FORMULA_REGEX || name =~ HOMEBREW_CASK_TAP_FORMULA_REGEX)
         install_tap $1, $2
       end
