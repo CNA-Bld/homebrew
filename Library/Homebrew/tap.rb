@@ -31,6 +31,10 @@ class Tap
   # e.g. 'usr/local/Library/Taps/user/repo.json'
   attr_reader :json_path
 
+  # If this {Tap} is a pinned one
+  # Pinned taps will be prioritized over core if formulae names are supplied by the user
+  attr_reader :pinned
+
   def initialize(user, repo)
     # we special case homebrew so users don't have to shift in a terminal
     @user = user == "homebrew" ? "Homebrew" : user
@@ -103,22 +107,30 @@ class Tap
     Pathname.glob("#{path}/cmd/brew-*").select(&:executable?)
   end
 
+  def attributes
+    @attributes ||= if json_path.exist?
+                      Utils::JSON.load(File.read(json_path))
+                    else
+                      { "pinned" => false }
+                    end
+  end
+
+  def write_json
+    @json_path.atomic_write(Utils::JSON.dump(attributes))
+  end
+
   def pinned?
-    @json_path.exist?? Utils::JSON.load(File.read(@json_path))["pinned"] : false
+    attributes["pinned"]
   end
 
   def pin
-    attributes = {
-        "pinned" => true
-    }
-    @json_path.atomic_write(Utils::JSON.dump(attributes))
+    attributes["pinned"] = true
+    write_json
   end
 
   def unpin
-    attributes = {
-        "pinned" => false
-    }
-    @json_path.atomic_write(Utils::JSON.dump(attributes))
+    attributes["pinned"] = false
+    write_json
   end
 
   def to_hash
@@ -134,7 +146,7 @@ class Tap
       "formula_names" => formula_names,
       "formula_files" => formula_files.map(&:to_s),
       "command_files" => command_files.map(&:to_s),
-      "pinned" => pinned?
+      "pinned" => @pinned
     }
   end
 
